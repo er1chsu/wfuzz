@@ -1,6 +1,7 @@
 # wfuzz
 This wfuzz is originally from kali1.0 ,  
-add download function --download 
+add download function --download
+
 Usage: 
 ```
 ********************************************************
