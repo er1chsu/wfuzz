@@ -2,7 +2,7 @@
 This wfuzz is originally from kali1.0 ,  
 add download function --download 
 Usage: 
-'''
+```
 ********************************************************
 * Wfuzz  2.0 - The Web Bruteforcer                     *
 ********************************************************
@@ -45,7 +45,7 @@ Example: - wfuzz.py -c -z file,commons.txt --hc 404 -o html http://www.site.com/
 	 - wfuzz.py -c -z file,users.txt -z file,pass.txt --hc 404 http://www.site.com/log.asp?user=FUZZ&pass=FUZ2Z
 	 - wfuzz.py -c -z range,1-10 --hc=BBB http://www.site.com/FUZZ{something}
    - wfuzz.py -c -z range,1-10 --download http http://www.site.com/FUZZ
-'''
+```
 	  
 
 
