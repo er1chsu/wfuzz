@@ -19,6 +19,8 @@ from dictio import dictionary
 import re
 import hashlib
 import random
+import urllib
+import urllib2
 
 from collections import defaultdict
 
@@ -264,7 +266,66 @@ class requestGenerator:
 			if http_method: newreq.method = http_method
 			if method != 'None': newreq.setAuth(method,userpass)
 			return newreq
+class Download:
+	def __init__(self):
+		self.url=""
+		self.code=""
+	def getCode(self,code):
+		self.code=code
+	
+	def getUrl(self,url):
+		self.url=url
 
+	def downloadWithProgress(self,url):
+		file_name = url.split('/')[-1]
+#		print "progress"+str(url)
+		u = urllib2.urlopen(url)
+		f = open(file_name, 'wb')
+		meta = u.info()
+		file_size = int(meta.getheaders("Content-Length")[0])
+		print "Downloaded: %s Bytes: %s" % (file_name, file_size)
+
+		file_size_dl = 0
+		block_sz = 8192
+		while True:
+			buffer = u.read(block_sz)
+			if not buffer:
+		        	break
+
+		    	file_size_dl += len(buffer)
+			f.write(buffer)
+	    		status = r"%10d [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+			status = status + chr(8)*(len(status)+1)
+			print status,
+
+		f.close()
+
+
+	def downloadFile(self):
+		pureURL=str(self.url)[7:-2]
+#		print pureURL
+		filename=pureURL.split("/")[-1]
+#		print filename
+		filepath=os.path.join("./",filename)
+#		print fullfilename
+		if not os.path.exists(filepath):
+#			urllib.urlretrieve(pureURL,filepath)
+			if self.code==200:
+				self.downloadWithProgress(pureURL)
+#			else:
+#				print pureURL+"\n Header response code not 200"
+			
+		else:
+			print filepath+" exist!!!"
+		
+	def printLink(self):
+		
+		filename=str(self.url)[7:-2].split("/")[-1]
+		print filename
+		print str(self.url)[7:-2]+str(self.code)
+		
+	
+ 
 				
 
 
@@ -359,7 +420,7 @@ class FuzzResult:
 
 			nreq+=1
 			self.imprimeResult(nreq,request.description[-50:],fl)
-
+                        down.getCode(self.code)
 			del request
 
 	def __getitem__ (self,key):
@@ -374,7 +435,6 @@ class FuzzResult:
 			if i==key:
 				return True
 		return False
-
 
 	def imprimeResult(self, nreq,fuzzs,finalLine):
 		global printMutex
@@ -409,6 +469,7 @@ class FuzzResult:
 
 
 		sys.stdout.write ("%03d" % (self.code)) 
+                
 		
 		if color:
 		    if OS!='nt':
@@ -470,6 +531,8 @@ class Fuzzer:
 			th=threading.Thread(target=self.attack, kwargs={})
 			th.start()
 			self.threads_list.append(th)
+                        #print self.threads_list
+
 
 	def attack (self):
 		rq=self.getNewReq()
@@ -478,10 +541,17 @@ class Fuzzer:
 				res=FuzzResult(rq,self.sleeper,False)
 				#if (str(res.code) not in self.ignore):
 				self.agregaresultado(res)
+                                #if self.code==200:
+				down.getUrl(rq)
+#				down.printLink()
+				if downloadFileFlag:
+					down.downloadFile()
+
 			except :
 				pass
 			rq=self.getNewReq()
-
+                
+                
 	def agregaresultado (self,res):
 		self.Semaphore_Mutex.acquire()
 		self.results.append(res)
@@ -605,6 +675,8 @@ if __name__=="__main__":
 
 	rlevel=0
 	current_depth=0
+	down=Download()
+	downloadFileFlag=False
 
 	banner='''
 ********************************************************
@@ -640,6 +712,7 @@ Options:
 
 --hc/hl/hw/hh N[,N]+	    : Hide resposnes with the specified[s] code/lines/words/chars (Use BBB for taking values from baseline)
 --hs regex		    : Hide responses with the specified regex within the response
+--download		    : download the file which response code  is 200
 
 Keyword: FUZZ,FUZ2Z  wherever you put these words wfuzz will replace them by the payload selected. 
 
@@ -653,7 +726,7 @@ Example: - wfuzz.py -c -z file,commons.txt --hc 404 -o html http://www.site.com/
 
 
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "IXvcx:b:e:R:d:z:r:f:t:w:V:H:m:o:s:p:",['hc=','hh=','hl=','hw=','hs=','ntlm=','basic=','digest=','follow'])
+		opts, args = getopt.getopt(sys.argv[1:], "IXvcx:b:e:R:d:z:r:f:t:w:V:H:m:o:s:p:",['hc=','hh=','hl=','hw=','hs=','ntlm=','basic=','digest=','follow','download'])
 		optsd=defaultdict(list)
 		for i,j in opts:
 			optsd[i].append(j)
@@ -721,6 +794,8 @@ Example: - wfuzz.py -c -z file,commons.txt --hc 404 -o html http://www.site.com/
 		hidechars=optsd["--hh"][0].split(",")
 	if "--hs" in optsd:
 		hideregex=re.compile(optsd["--hs"][0],re.MULTILINE|re.DOTALL)
+	if "--download" in optsd:
+		downloadFileFlag=True
 
 	payloadtype='; '.join(optsd["-z"])
 
@@ -820,7 +895,10 @@ Example: - wfuzz.py -c -z file,commons.txt --hc 404 -o html http://www.site.com/
 	    print "=================================================================="
 	    print "ID	Response   Lines      Word         Chars          Request    "
 	    print "==================================================================\r\n"
+        
+        #print "testaaacl"+str(fz.attack().rq)
 	fz.Launch()
+        #print "fz.Launch())"
 	try:
 		while True:
 			if fz.cleanthreads():
@@ -847,6 +925,8 @@ Example: - wfuzz.py -c -z file,commons.txt --hc 404 -o html http://www.site.com/
 							rh2.append(rhtemp)
 						if i.code==200 and i.req.followLocation and i.req.follow_url and i.req.follow_url[-1]=='/':
 							i.req.setUrl(i.req.follow_url+"FUZZ")
+                                                        print "testtt"+i.req.follow_url+"FUZZ"
+                                                        
 							rhtemp=requestGenerator(i.req,"None",dic,proxy,proxytype)
 							rh2.append(rhtemp)
 						elif i.code>=300 and i.code<400:
@@ -861,7 +941,7 @@ Example: - wfuzz.py -c -z file,commons.txt --hc 404 -o html http://www.site.com/
 								i.req.setUrl(i.req.completeUrl+"/FUZZ")
 							rhtemp=requestGenerator(i.req,"None",dic,None,proxy,proxytype)
 							rh2.append(rhtemp)
-	
+	                                                
 	
 					if rh2.moreRequests:
 						fz=Fuzzer(rh2,hidecodes,sleeper,ths)
